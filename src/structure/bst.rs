@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+use std::sync::mpsc::RecvTimeoutError;
 
 pub type BstNodeLink = Rc<RefCell<BstNode>>;
 pub type WeakBstNodeLink = Weak<RefCell<BstNode>>;
@@ -146,33 +147,118 @@ impl BstNode {
     /**
      * Alternate simpler version of tree_successor that made use of is_nil checking
      */
-    #[allow(dead_code)]
-    pub fn tree_successor_simpler(x_node: &BstNodeLink) -> Option<BstNodeLink>{
-        //create a shadow of x_node so it can mutate
-        let mut x_node = x_node;
-        let right_node = &x_node.borrow().right.clone();
-        if BstNode::is_nil(right_node)!=true{
-            return Some(right_node.clone().unwrap().borrow().minimum());
-        }
+    // #[allow(dead_code)]
+    // pub fn tree_successor_simpler(x_node: &BstNodeLink) -> Option<BstNodeLink>{
+    //     //create a shadow of x_node so it can mutate
+    //     let mut x_node = x_node;
+    //     let right_node = &x_node.borrow().right.clone();
+    //     if BstNode::is_nil(right_node)!=true{
+    //         return Some(right_node.clone().unwrap().borrow().minimum());
+    //     }
 
-        let mut y_node = BstNode::upgrade_weak_to_strong(x_node.borrow().parent.clone());
-        let y_node_right = &y_node.clone().unwrap().borrow().right.clone();
-        let mut y_node2: Rc<RefCell<BstNode>>;
-        while BstNode::is_nil(&y_node) && BstNode::is_node_match_option(Some(x_node.clone()), y_node_right.clone()) {
-            y_node2 = y_node.clone().unwrap();
-            x_node = &y_node2;
-            let y_parent = y_node.clone().unwrap().borrow().parent.clone().unwrap();
-            y_node = BstNode::upgrade_weak_to_strong(Some(y_parent));
-        }
+    //     let mut y_node = BstNode::upgrade_weak_to_strong(x_node.borrow().parent.clone());
+    //     let y_node_right = &y_node.clone().unwrap().borrow().right.clone();
+    //     let mut y_node2: Rc<RefCell<BstNode>>;
+    //     while BstNode::is_nil(&y_node) && BstNode::is_node_match_option(Some(x_node.clone()), y_node_right.clone()) {
+    //         y_node2 = y_node.clone().unwrap();
+    //         x_node = &y_node2;
+    //         let y_parent = y_node.clone().unwrap().borrow().parent.clone().unwrap();
+    //         y_node = BstNode::upgrade_weak_to_strong(Some(y_parent));
+    //     }
 
-        //in case our sucessor traversal yield root, means self is the highest key
-        if BstNode::is_node_match_option(y_node.clone(), Some(BstNode::get_root(&x_node))) {
-            return None;
-        }
+    //     //in case our sucessor traversal yield root, means self is the highest key
+    //     if BstNode::is_node_match_option(y_node.clone(), Some(BstNode::get_root(&x_node))) {
+    //         return None;
+    //     }
 
-        //default return self / x_node
-        return Some(y_node.clone().unwrap())
+    //     //default return self / x_node
+    //     return Some(y_node.clone().unwrap())
+    // }
+
+    // always from root asumption
+    pub fn tree_insert(&mut self, current_node_link: &BstNodeLink, value: i32) {
+        if self.clone().key_is_bigger(value) { // check the value with the current key lower or higher
+            if self.left.is_some() {
+                return self.left.clone().unwrap().borrow_mut().tree_insert(&self.left.clone().unwrap(), value) // go to the lower node of the left subtree
+            }
+            return self.add_left_child(current_node_link, value); // if there is no value in the left, assign the value
+        }else {
+            if self.right.is_some() {
+                return self.right.clone().unwrap().borrow_mut().tree_insert(&self.right.clone().unwrap(), value) // go to the lower node of the right subtree
+            }
+            return self.add_right_child(current_node_link, value); // if there is no value in the left, assign the value
+        }
     }
+
+    // fn transplant(&mut self, bnode: &Option<BstNodeLink>){
+    //     if let Some(anode_parent_node) = self.parent.clone().unwrap().upgrade() {
+    //         let parent_copy = anode_parent_node.clone();
+    //         if BstNode::is_node_match_option(BstNode::option_val(&self.left), Some(self.get_bst_nodelink_copy())) {
+    //             let mut left_parent = parent_copy.borrow_mut();
+    //             left_parent.left = bnode.clone();
+    //         } else {
+    //             let mut right_parent = parent_copy.borrow_mut();
+    //             right_parent.right = bnode.clone();
+    //         }
+    //     }
+    //     if let Some(bnode_ref) = bnode.clone() {
+    //         let mut bnode_mut = bnode_ref.borrow_mut();
+    //         bnode_mut.left = BstNode::option_val(&self.left);
+    //         bnode_mut.right = BstNode::option_val(&self.right);
+    //         bnode_mut.parent = self.parent.clone();
+    //     }
+    // }
+    
+    fn transplant(u: &Rc<RefCell<BstNode>>, v: &Option<Rc<RefCell<BstNode>>>) {
+        let parent_u = &BstNode::upgrade_weak_to_strong(u.borrow().parent.clone());
+        if parent_u.is_none() {
+            if let Some(v_node) = v{
+                if BstNode::is_nil(v) {
+                    if let Some(left_u) = u.borrow().left.clone() {
+                        left_u.borrow_mut().parent = None;
+                    }
+                    if let Some(right_u) = u.borrow().right.clone()  {
+                        right_u.borrow_mut().parent = None;
+                    }
+                }
+            }
+        } else if BstNode::is_node_match_option(Some(u.clone()), parent_u.clone().unwrap().borrow().left.clone()) {
+            parent_u.clone().unwrap().borrow_mut().left = v.clone();
+        }else {
+            parent_u.clone().unwrap().borrow_mut().right = v.clone();
+        }
+        if let Some(exist) = v {
+            if let Some(new_parent) = parent_u.clone() {
+                exist.borrow_mut().parent = Some(BstNode::downgrade(&new_parent));
+            }else {
+                exist.borrow_mut().parent = None;
+            }
+        }
+    }
+
+    pub fn tree_delete(target: &BstNodeLink){
+        if target.borrow().left.is_none() {
+            BstNode::transplant(target, &target.borrow().right);
+        }else if target.borrow().right.is_none() {
+            BstNode::transplant(target, &target.borrow().left);
+        }else {
+            let right_minimum = &target.clone().borrow().right.clone().unwrap().borrow().minimum();
+            let right_minimum_parent = BstNode::upgrade_weak_to_strong(right_minimum.borrow().parent.clone());
+            if BstNode::is_node_match_option(right_minimum_parent, Some(target.clone())) {
+                if let Some(right_right_minimum) = &right_minimum.borrow_mut().right.clone() {
+                    BstNode::transplant(right_minimum, &Some(right_right_minimum.clone()));
+                    right_minimum.borrow_mut().right = target.borrow().right.clone();
+                    right_right_minimum.borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone()));
+                }
+            }
+            let right_minimum_copy = right_minimum.borrow().get_bst_nodelink_copy();
+            let mut left_right_minimum = right_minimum.borrow_mut().left.clone();
+            BstNode::transplant(target, &Some(right_minimum.clone()));
+            left_right_minimum = target.borrow().left.clone();
+            left_right_minimum.unwrap().borrow_mut().parent = Some(BstNode::downgrade(&&right_minimum_copy.clone()));
+        }
+    }
+
 
     /**
      * private function return true if node doesn't has parent nor children nor key
@@ -190,6 +276,13 @@ impl BstNode {
                 return false;
             }
         }
+    }
+
+    fn option_val(node: &Option<BstNodeLink>) -> Option<BstNodeLink> {
+        if let Some(nodes) = node{
+            return node.clone();
+        }
+        return None;
     }
 
     //helper function to compare both nodelink
@@ -218,5 +311,12 @@ impl BstNode {
             None => None,
             Some(x) => Some(x.upgrade().unwrap()),
         }
+    }
+
+    fn key_is_bigger(self, value: i32) -> bool {
+        if self.key.unwrap() > value {
+            return true;
+        }
+        return false;
     }
 }

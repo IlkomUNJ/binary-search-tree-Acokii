@@ -16,54 +16,64 @@ fn main() {
 
 fn test_binary_search_tree(){
     let rootlink: BstNodeLink = BstNode::new_bst_nodelink(15);
-    rootlink.borrow_mut().add_left_child(&rootlink, 6);
-    rootlink.borrow_mut().add_right_child(&rootlink, 18);
+    // rootlink.borrow_mut().add_left_child(&rootlink, 6);
+    // rootlink.borrow_mut().add_right_child(&rootlink, 18);
+    rootlink.borrow_mut().tree_insert(&rootlink, 6);
+    rootlink.borrow_mut().tree_insert(&rootlink, 18);
 
     //add right subtree
-    let right_subtree: &Option<BstNodeLink> = &rootlink.borrow().right;
-    if let Some(right_tree_extract) = right_subtree {
-        right_tree_extract
-            .borrow_mut()
-            .add_left_child(right_tree_extract, 17);
-        right_tree_extract
-            .borrow_mut()
-            .add_right_child(right_tree_extract, 20);
-    }
+    // let right_subtree: &Option<BstNodeLink> = &rootlink.borrow().right;
+    // if let Some(right_tree_extract) = right_subtree {
+    //     right_tree_extract
+    //         .borrow_mut()
+    //         .add_left_child(right_tree_extract, 17);
+    //     right_tree_extract
+    //         .borrow_mut()
+    //         .add_right_child(right_tree_extract, 20);
+    // }
+    rootlink.borrow_mut().tree_insert(&rootlink, 17);
+    rootlink.borrow_mut().tree_insert(&rootlink, 20);
 
     //add left subtree
-    let left_subtree: &Option<BstNodeLink> = &rootlink.borrow().left;
-    if let Some(left_tree_extract) = left_subtree {
-        left_tree_extract
-            .borrow_mut()
-            .add_left_child(left_tree_extract, 3);
-        left_tree_extract
-            .borrow_mut()
-            .add_right_child(left_tree_extract, 7);
+    // let left_subtree: &Option<BstNodeLink> = &rootlink.borrow().left;
+    // if let Some(left_tree_extract) = left_subtree {
+    //     left_tree_extract
+    //         .borrow_mut()
+    //         .add_left_child(left_tree_extract, 3);
+    //     left_tree_extract
+    //         .borrow_mut()
+    //         .add_right_child(left_tree_extract, 7);
 
-        //add left subtree terminal
-        let left_subtree_terminal = &left_tree_extract.borrow().left;
-        if let Some(terminal_left_tree_link) = left_subtree_terminal{
-            terminal_left_tree_link.borrow_mut().add_left_child(terminal_left_tree_link, 2);
-            terminal_left_tree_link.borrow_mut().add_right_child(terminal_left_tree_link, 4);
-        }
-        //add 2nd level right subtree of node 7
-        let second_right_subtree = &left_tree_extract.borrow().right;
-        if let Some(second_right_subtree_link) = second_right_subtree{
-            second_right_subtree_link.borrow_mut().add_right_child(second_right_subtree_link, 13);
+    //     //add left subtree terminal
+    //     let left_subtree_terminal = &left_tree_extract.borrow().left;
+    //     if let Some(terminal_left_tree_link) = left_subtree_terminal{
+    //         terminal_left_tree_link.borrow_mut().add_left_child(terminal_left_tree_link, 2);
+    //         terminal_left_tree_link.borrow_mut().add_right_child(terminal_left_tree_link, 4);
+    //     }
+    //     //add 2nd level right subtree of node 7
+    //     let second_right_subtree = &left_tree_extract.borrow().right;
+    //     if let Some(second_right_subtree_link) = second_right_subtree{
+    //         second_right_subtree_link.borrow_mut().add_right_child(second_right_subtree_link, 13);
 
-            let third_left_subtree = &second_right_subtree_link.borrow().right;
-            if let Some(third_left_subtree_link) = third_left_subtree{
-                third_left_subtree_link.borrow_mut().add_left_child(third_left_subtree_link, 9);
-            }
-        }
-    }
+    //         let third_left_subtree = &second_right_subtree_link.borrow().right;
+    //         if let Some(third_left_subtree_link) = third_left_subtree{
+    //             third_left_subtree_link.borrow_mut().add_left_child(third_left_subtree_link, 9);
+    //         }
+    //     }
+    // }
+    rootlink.borrow_mut().tree_insert(&rootlink, 3);
+    rootlink.borrow_mut().tree_insert(&rootlink, 7);
+    rootlink.borrow_mut().tree_insert(&rootlink, 2);
+    rootlink.borrow_mut().tree_insert(&rootlink, 4);
+    rootlink.borrow_mut().tree_insert(&rootlink, 9);
+    rootlink.borrow_mut().tree_insert(&rootlink, 13);
 
     //print the tree at this time
     let main_tree_path = "bst_graph.dot";
     generate_dotfile_bst(&rootlink, main_tree_path);
 
     //tree search test
-    let search_keys = vec![15, 9, 22];
+    let search_keys = vec![15, 9, 22, 13, 7, 4, 2, 20, 17];
 
     for &key in search_keys.iter() {
         print!("tree search result of key {} is ", key);
@@ -103,15 +113,31 @@ fn test_binary_search_tree(){
         if let Some(node) = rootlink.borrow().tree_search(&key) {
             print!("successor of node ({}) is ", key);
 
-            if let Some(successor) = BstNode::tree_successor_simpler(&node) {
-                println!("{:?}", successor.borrow().key);
-            } else {
-                println!("not found");
-            }
+            // if let Some(successor) = BstNode::tree_successor_simpler(&node) {
+            //     println!("{:?}", successor.borrow().key);
+            // } else {
+            //     println!("not found");
+            // }
         } else {
             println!("node with key of {} does not exist, failed to get successor", key)
         }
     }
+
+    // delete test
+    let delete_keys = vec![7, 22, 3, 6];
+
+    for &key in delete_keys.iter() {
+        if let Some(node_result) = rootlink.borrow().tree_search(&key) {
+            BstNode::tree_delete(&node_result);
+            println!("deleted key {} success", key)
+        } else {
+            println!("not found key {}, can't delete that node", key);
+        }
+    }
+
+    // print deleted tree
+    let deleted_tree_path = "bst_graph_deleted.dot";
+    generate_dotfile_bst(&rootlink, deleted_tree_path);
 }
 
 #[allow(dead_code)]
