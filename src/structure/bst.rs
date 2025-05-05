@@ -189,43 +189,28 @@ impl BstNode {
         }
     }
 
-    // fn transplant(&mut self, bnode: &Option<BstNodeLink>){
-    //     if let Some(anode_parent_node) = self.parent.clone().unwrap().upgrade() {
-    //         let parent_copy = anode_parent_node.clone();
-    //         if BstNode::is_node_match_option(BstNode::option_val(&self.left), Some(self.get_bst_nodelink_copy())) {
-    //             let mut left_parent = parent_copy.borrow_mut();
-    //             left_parent.left = bnode.clone();
-    //         } else {
-    //             let mut right_parent = parent_copy.borrow_mut();
-    //             right_parent.right = bnode.clone();
-    //         }
-    //     }
-    //     if let Some(bnode_ref) = bnode.clone() {
-    //         let mut bnode_mut = bnode_ref.borrow_mut();
-    //         bnode_mut.left = BstNode::option_val(&self.left);
-    //         bnode_mut.right = BstNode::option_val(&self.right);
-    //         bnode_mut.parent = self.parent.clone();
-    //     }
-    // }
-    
     fn transplant(rootlink: BstNodeLink, u: &Rc<RefCell<BstNode>>, v: &Option<Rc<RefCell<BstNode>>>) {
-        let parent_u = &BstNode::upgrade_weak_to_strong(u.borrow().parent.clone());
-        if parent_u.is_none() {
-            if let Some(_v_node) = v{
-                if BstNode::is_nil(v) {
-                    if let Some(left_u) = u.borrow().left.clone() {
-                        left_u.borrow_mut().parent = None;
-                    }
-                    if let Some(right_u) = u.borrow().right.clone()  {
-                        right_u.borrow_mut().parent = None;
-                    }
+        let parent_u = &BstNode::upgrade_weak_to_strong(u.borrow().parent.clone()); // None
+        if parent_u.is_none() { // ngecek parent ada atau nggak
+            if BstNode::is_nil(v) { // ngecek v ada atau nggak
+                if let Some(left_u) = u.borrow().left.clone() {
+                    left_u.borrow_mut().parent = None;
+                }
+                if let Some(right_u) = u.borrow().right.clone() {
+                    right_u.borrow_mut().parent = None;
                 }
             }
-        } else if BstNode::is_node_match_option(Some(u.clone()), parent_u.clone().unwrap().borrow().left.clone()) {
-            if parent_u.clone().unwrap().try_borrow_mut().is_err() {
-                rootlink.borrow_mut().left = v.clone();
+            if let Some(left_u) = u.borrow().left.clone() {
+                left_u.borrow_mut().parent = Some(BstNode::downgrade(&v.clone().unwrap()));
+            }
+            if let Some(right_u) = u.borrow().right.clone() {
+                right_u.borrow_mut().parent = Some(BstNode::downgrade(&v.clone().unwrap()));
+            }
+        }else if BstNode::is_node_match_option(Some(u.clone()), parent_u.clone().unwrap().borrow().left.clone()) { // u dari kiri parent
+            if parent_u.clone().unwrap().try_borrow_mut().is_err() { // cek eror
+                rootlink.borrow_mut().left = v.clone(); // asign parent.left to transplant node
             }else {
-                parent_u.clone().unwrap().borrow_mut().left = v.clone();
+                parent_u.clone().unwrap().borrow_mut().left = v.clone(); // asign parent.left to transplant node
             }
         }else {
             if parent_u.clone().unwrap().try_borrow_mut().is_err() {
@@ -235,38 +220,43 @@ impl BstNode {
             }
             parent_u.clone().unwrap().try_borrow_mut().unwrap().right = v.clone();
         }
-        if let Some(exist) = v {
+        if let Some(exist) = &v {
             if let Some(new_parent) = parent_u.clone() {
-                exist.borrow_mut().parent = Some(BstNode::downgrade(&new_parent));
+                exist.borrow_mut().parent = Some(BstNode::downgrade(&new_parent)); // v parent to u.parent if exist
             }else {
-                exist.borrow_mut().parent = None;
+                exist.borrow_mut().parent = None; // parent to none if not exist
             }
         }
     }
 
-    pub fn tree_delete(mut rootlink: BstNodeLink, target: &BstNodeLink) -> BstNodeLink{
+    pub fn tree_delete(rootlink: BstNodeLink, target: &BstNodeLink) -> BstNodeLink{
+        println!("target :{:?}", target);
         if target.borrow().left.is_none() {
             BstNode::transplant(rootlink.clone(),target, &target.borrow().right);
         }else if target.borrow().right.is_none() {
             BstNode::transplant(rootlink.clone(),target, &target.borrow().left);
         }else {
-            let right_minimum = &target.clone().borrow().right.clone().unwrap().borrow().minimum(); // 18
-            let right_minimum_parent = BstNode::upgrade_weak_to_strong(right_minimum.borrow().parent.clone()); // 17
-            if !BstNode::is_node_match_option(right_minimum_parent, Some(target.clone())) { 
-                BstNode::transplant(rootlink.clone(),right_minimum, &right_minimum.borrow().right.clone());
-                right_minimum.borrow_mut().right = target.borrow().right.clone(); // 
-                right_minimum.borrow().right.clone().unwrap().borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone()));
-            }else if BstNode::is_node_match_option(target.borrow().right.clone(), Some(right_minimum.clone())) {
-                right_minimum.borrow_mut().right = None;
+            let right_minimum = &target.clone().borrow().right.clone().unwrap().borrow().minimum(); // 17
+            // println!("node y : {:?}", right_minimum);
+            let right_minimum_parent = &BstNode::upgrade_weak_to_strong(right_minimum.borrow().parent.clone()); // 18
+            // println!("y parent : {:?}", right_minimum_parent);
+            if !(BstNode::is_node_match_option(right_minimum_parent.clone(), Some(target.clone()))) { // harusnya gamasuk kesini
+                BstNode::transplant(rootlink.clone(),right_minimum, &right_minimum.borrow().right.clone()); // 17 -> 17.kanan
+                right_minimum.borrow_mut().right = target.borrow().right.clone(); //17.kanan -> 18
+                println!("minimum right 1 : {:?}", right_minimum);
+                right_minimum.borrow_mut().right.clone().unwrap().borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone())); // 18.parent -> 17
+                println!("minimum right 2 : {:?}", right_minimum);
             }
-            BstNode::transplant(rootlink.clone(),target, &Some(right_minimum.clone())); // 
-            right_minimum.borrow_mut().left = target.borrow().left.clone(); // 
-            right_minimum.borrow().left.clone().unwrap().borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone())); // 
+            // println!("state :{}", !(BstNode::is_node_match_option(right_minimum_parent.clone(), Some(target.clone()))));
+            println!("minimum right 3 :{:?}", right_minimum);
+            BstNode::transplant(rootlink.clone(),target, &Some(right_minimum.clone())); // ngubah 17 jadi 18
+            right_minimum.borrow_mut().left = target.borrow().left.clone(); // masukin 17.kiri jadi 18.kiri
+            right_minimum.borrow().left.clone().unwrap().borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone())); // set 18.kiri.parent jadi 18 
+            println!("minimum right 4 :{:?}", right_minimum);
             if let Some(_exist) = target.borrow().parent.clone() {
                 return rootlink;
             }
-            let new_rootlink = right_minimum.clone();
-            return new_rootlink;
+            return right_minimum.clone();
         }
         rootlink
     }

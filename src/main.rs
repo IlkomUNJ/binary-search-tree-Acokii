@@ -87,19 +87,19 @@ fn test_binary_search_tree(){
         }
     }
 
-    //min test
+    // min test
     let min_node = rootlink.borrow().minimum();
     println!("minimum result {:?}", min_node.borrow().key);
 
-    //max test
+    // max test
     let max_node = rootlink.borrow().maximum();
     println!("maximum result {:?}", max_node.borrow().key);
 
-    //root node get test
+    // root node get test
     let root_node = BstNode::get_root(&max_node);
     println!("root node {:?}", root_node.borrow().key);
 
-    //successor test
+    // successor test
     let query_keys = vec![
         2, // min_node, should return its parent Some(3)
         20, // max_node, should return None
@@ -127,12 +127,13 @@ fn test_binary_search_tree(){
 
     // delete test
     let delete_keys = vec![
-        20, // non child
-        7, // only have right child
+        // 20, // non child
+        // 7, // only have right child
         22, // imitation node, should be not found
-        3, // 2 child exist
+        // 3, // 2 child exist
         15, // root delete
-        6, // root child delete
+        // 6, // root child delete
+        17 // second root delete
         ];
 
     for &key in delete_keys.iter() {
@@ -140,7 +141,8 @@ fn test_binary_search_tree(){
         let mut new_rootlink: BstNodeLink = rootlink.borrow().get_bst_nodelink_copy();
         if let Some(node_result) = rootlink.borrow().tree_search(&key) {
             new_rootlink = BstNode::tree_delete(rootlink_copy, &node_result);
-            println!("deleted key {} success", key)
+            println!("deleted key {} success", key);
+            // println!("debug {:?}", node_result);
         } else {
             println!("not found key {}, can't delete that node", key);
         }
@@ -150,6 +152,7 @@ fn test_binary_search_tree(){
     // print deleted tree
     let deleted_tree_path = "bst_graph_deleted.dot";
     generate_dotfile_bst(&rootlink, deleted_tree_path);
+    println!("debug {:?}", rootlink);
 }
 
 #[allow(dead_code)]
