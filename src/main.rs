@@ -132,13 +132,14 @@ fn test_binary_search_tree(){
         22, // imitation node, should be not found
         3, // 2 child exist
         15, // root delete
-        17 // second root delete
+        6, // root child delete
         ];
 
     for &key in delete_keys.iter() {
+        let rootlink_copy= rootlink.borrow().get_bst_nodelink_copy();
         let mut new_rootlink: BstNodeLink = rootlink.borrow().get_bst_nodelink_copy();
         if let Some(node_result) = rootlink.borrow().tree_search(&key) {
-            new_rootlink = BstNode::tree_delete(rootlink.clone(), &node_result);
+            new_rootlink = BstNode::tree_delete(rootlink_copy, &node_result);
             println!("deleted key {} success", key)
         } else {
             println!("not found key {}, can't delete that node", key);

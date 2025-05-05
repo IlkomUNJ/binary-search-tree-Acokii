@@ -208,10 +208,10 @@ impl BstNode {
     //     }
     // }
     
-    fn transplant(u: &Rc<RefCell<BstNode>>, v: &Option<Rc<RefCell<BstNode>>>) {
+    fn transplant(rootlink: BstNodeLink, u: &Rc<RefCell<BstNode>>, v: &Option<Rc<RefCell<BstNode>>>) {
         let parent_u = &BstNode::upgrade_weak_to_strong(u.borrow().parent.clone());
         if parent_u.is_none() {
-            if let Some(v_node) = v{
+            if let Some(_v_node) = v{
                 if BstNode::is_nil(v) {
                     if let Some(left_u) = u.borrow().left.clone() {
                         left_u.borrow_mut().parent = None;
@@ -222,9 +222,18 @@ impl BstNode {
                 }
             }
         } else if BstNode::is_node_match_option(Some(u.clone()), parent_u.clone().unwrap().borrow().left.clone()) {
-            parent_u.clone().unwrap().borrow_mut().left = v.clone();
+            if parent_u.clone().unwrap().try_borrow_mut().is_err() {
+                rootlink.borrow_mut().left = v.clone();
+            }else {
+                parent_u.clone().unwrap().borrow_mut().left = v.clone();
+            }
         }else {
-            parent_u.clone().unwrap().borrow_mut().right = v.clone();
+            if parent_u.clone().unwrap().try_borrow_mut().is_err() {
+                rootlink.borrow_mut().right = v.clone();
+            }else {
+                parent_u.clone().unwrap().borrow_mut().right = v.clone();
+            }
+            parent_u.clone().unwrap().try_borrow_mut().unwrap().right = v.clone();
         }
         if let Some(exist) = v {
             if let Some(new_parent) = parent_u.clone() {
@@ -237,21 +246,23 @@ impl BstNode {
 
     pub fn tree_delete(mut rootlink: BstNodeLink, target: &BstNodeLink) -> BstNodeLink{
         if target.borrow().left.is_none() {
-            BstNode::transplant(target, &target.borrow().right);
+            BstNode::transplant(rootlink.clone(),target, &target.borrow().right);
         }else if target.borrow().right.is_none() {
-            BstNode::transplant(target, &target.borrow().left);
+            BstNode::transplant(rootlink.clone(),target, &target.borrow().left);
         }else {
-            let right_minimum = &target.clone().borrow().right.clone().unwrap().borrow().minimum(); // 17
-            let right_minimum_parent = BstNode::upgrade_weak_to_strong(right_minimum.borrow().parent.clone()); // 18
+            let right_minimum = &target.clone().borrow().right.clone().unwrap().borrow().minimum(); // 18
+            let right_minimum_parent = BstNode::upgrade_weak_to_strong(right_minimum.borrow().parent.clone()); // 17
             if !BstNode::is_node_match_option(right_minimum_parent, Some(target.clone())) { 
-                BstNode::transplant(right_minimum, &right_minimum.borrow().right.clone()); // 17 -> none alias child 18 ilang
-                right_minimum.borrow_mut().right = target.borrow().right.clone(); // 17.kanan -> 15.kanan
+                BstNode::transplant(rootlink.clone(),right_minimum, &right_minimum.borrow().right.clone());
+                right_minimum.borrow_mut().right = target.borrow().right.clone(); // 
                 right_minimum.borrow().right.clone().unwrap().borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone()));
+            }else if BstNode::is_node_match_option(target.borrow().right.clone(), Some(right_minimum.clone())) {
+                right_minimum.borrow_mut().right = None;
             }
-            BstNode::transplant(target, &Some(right_minimum.clone())); // 
+            BstNode::transplant(rootlink.clone(),target, &Some(right_minimum.clone())); // 
             right_minimum.borrow_mut().left = target.borrow().left.clone(); // 
             right_minimum.borrow().left.clone().unwrap().borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone())); // 
-            if let Some(exist) = target.borrow().parent.clone() {
+            if let Some(_exist) = target.borrow().parent.clone() {
                 return rootlink;
             }
             let new_rootlink = right_minimum.clone();
