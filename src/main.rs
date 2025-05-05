@@ -127,13 +127,13 @@ fn test_binary_search_tree(){
 
     // delete test
     let delete_keys = vec![
-        // 20, // non child
-        // 7, // only have right child
+        20, // non child
+        7, // only have right child
         22, // imitation node, should be not found
-        // 3, // 2 child exist
+        3, // 2 child exist
         15, // root delete
-        // 6, // root child delete
-        17 // second root delete
+        17, // second root delete
+        6, // root child delete
         ];
 
     for &key in delete_keys.iter() {
@@ -152,7 +152,6 @@ fn test_binary_search_tree(){
     // print deleted tree
     let deleted_tree_path = "bst_graph_deleted.dot";
     generate_dotfile_bst(&rootlink, deleted_tree_path);
-    println!("debug {:?}", rootlink);
 }
 
 #[allow(dead_code)]

@@ -192,19 +192,20 @@ impl BstNode {
     fn transplant(rootlink: BstNodeLink, u: &Rc<RefCell<BstNode>>, v: &Option<Rc<RefCell<BstNode>>>) {
         let parent_u = &BstNode::upgrade_weak_to_strong(u.borrow().parent.clone()); // None
         if parent_u.is_none() { // ngecek parent ada atau nggak
-            if BstNode::is_nil(v) { // ngecek v ada atau nggak
+            if v.is_some() { // ngecek v ada atau nggak
+                if let Some(left_u) = u.borrow().left.clone() {
+                    left_u.borrow_mut().parent = Some(BstNode::downgrade(&v.clone().unwrap()));
+                }
+                if let Some(right_u) = u.borrow().right.clone() {
+                    right_u.borrow_mut().parent = Some(BstNode::downgrade(&v.clone().unwrap()));
+                }
+            }else {
                 if let Some(left_u) = u.borrow().left.clone() {
                     left_u.borrow_mut().parent = None;
                 }
                 if let Some(right_u) = u.borrow().right.clone() {
                     right_u.borrow_mut().parent = None;
                 }
-            }
-            if let Some(left_u) = u.borrow().left.clone() {
-                left_u.borrow_mut().parent = Some(BstNode::downgrade(&v.clone().unwrap()));
-            }
-            if let Some(right_u) = u.borrow().right.clone() {
-                right_u.borrow_mut().parent = Some(BstNode::downgrade(&v.clone().unwrap()));
             }
         }else if BstNode::is_node_match_option(Some(u.clone()), parent_u.clone().unwrap().borrow().left.clone()) { // u dari kiri parent
             if parent_u.clone().unwrap().try_borrow_mut().is_err() { // cek eror
@@ -230,32 +231,33 @@ impl BstNode {
     }
 
     pub fn tree_delete(rootlink: BstNodeLink, target: &BstNodeLink) -> BstNodeLink{
-        println!("target :{:?}", target);
+        // println!("target :{:?}", target);
         if target.borrow().left.is_none() {
             BstNode::transplant(rootlink.clone(),target, &target.borrow().right);
         }else if target.borrow().right.is_none() {
             BstNode::transplant(rootlink.clone(),target, &target.borrow().left);
         }else {
-            let right_minimum = &target.clone().borrow().right.clone().unwrap().borrow().minimum(); // 17
+            let right_minimum = &target.clone().borrow().right.clone().unwrap().borrow().minimum(); // 18
             // println!("node y : {:?}", right_minimum);
             let right_minimum_parent = &BstNode::upgrade_weak_to_strong(right_minimum.borrow().parent.clone()); // 18
             // println!("y parent : {:?}", right_minimum_parent);
             if !(BstNode::is_node_match_option(right_minimum_parent.clone(), Some(target.clone()))) { // harusnya gamasuk kesini
                 BstNode::transplant(rootlink.clone(),right_minimum, &right_minimum.borrow().right.clone()); // 17 -> 17.kanan
                 right_minimum.borrow_mut().right = target.borrow().right.clone(); //17.kanan -> 18
-                println!("minimum right 1 : {:?}", right_minimum);
+                // println!("minimum right 1 : {:?}", right_minimum);
                 right_minimum.borrow_mut().right.clone().unwrap().borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone())); // 18.parent -> 17
-                println!("minimum right 2 : {:?}", right_minimum);
             }
             // println!("state :{}", !(BstNode::is_node_match_option(right_minimum_parent.clone(), Some(target.clone()))));
-            println!("minimum right 3 :{:?}", right_minimum);
+            // println!("minimum right 2 :{:?}", right_minimum);
             BstNode::transplant(rootlink.clone(),target, &Some(right_minimum.clone())); // ngubah 17 jadi 18
-            right_minimum.borrow_mut().left = target.borrow().left.clone(); // masukin 17.kiri jadi 18.kiri
+            right_minimum.borrow_mut().left = target.borrow().left.clone(); // masukin 18.kiri jadi 17.kiri
             right_minimum.borrow().left.clone().unwrap().borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone())); // set 18.kiri.parent jadi 18 
-            println!("minimum right 4 :{:?}", right_minimum);
+            // println!("minimum right 3 :{:?}", right_minimum);
             if let Some(_exist) = target.borrow().parent.clone() {
+                println!("rootlink");
                 return rootlink;
             }
+            println!("right minimum");
             return right_minimum.clone();
         }
         rootlink
