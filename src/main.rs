@@ -126,7 +126,14 @@ fn test_binary_search_tree(){
     }
 
     // delete test
-    let delete_keys = vec![7, 22, 3, 15];
+    let delete_keys = vec![
+        20, // non child
+        7, // only have right child
+        22, // imitation node, should be not found
+        3, // 2 child exist
+        15, // root delete
+        17 // second root delete
+        ];
 
     for &key in delete_keys.iter() {
         let mut new_rootlink: BstNodeLink = rootlink.borrow().get_bst_nodelink_copy();
