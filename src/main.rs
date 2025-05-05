@@ -15,7 +15,7 @@ fn main() {
 }
 
 fn test_binary_search_tree(){
-    let rootlink: BstNodeLink = BstNode::new_bst_nodelink(15);
+    let mut rootlink: BstNodeLink = BstNode::new_bst_nodelink(15);
     // rootlink.borrow_mut().add_left_child(&rootlink, 6);
     // rootlink.borrow_mut().add_right_child(&rootlink, 18);
     rootlink.borrow_mut().tree_insert(&rootlink, 6);
@@ -65,20 +65,22 @@ fn test_binary_search_tree(){
     rootlink.borrow_mut().tree_insert(&rootlink, 7);
     rootlink.borrow_mut().tree_insert(&rootlink, 2);
     rootlink.borrow_mut().tree_insert(&rootlink, 4);
-    rootlink.borrow_mut().tree_insert(&rootlink, 9);
     rootlink.borrow_mut().tree_insert(&rootlink, 13);
+    rootlink.borrow_mut().tree_insert(&rootlink, 9);
 
     //print the tree at this time
     let main_tree_path = "bst_graph.dot";
     generate_dotfile_bst(&rootlink, main_tree_path);
 
     //tree search test
-    let search_keys = vec![15, 9, 22, 13, 7, 4, 2, 20, 17];
+    let search_keys = vec![6, 18 /*15, 9, 22, 13, 7, 4, 2, 20, 17*/];
 
     for &key in search_keys.iter() {
         print!("tree search result of key {} is ", key);
 
         if let Some(node_result) = rootlink.borrow().tree_search(&key) {
+            let minimum = node_result.borrow().minimum();
+            println!("minimum -> {:?}", minimum.borrow().key);
             println!("found -> {:?}", node_result.borrow().key);
         } else {
             println!("not found");
@@ -124,15 +126,17 @@ fn test_binary_search_tree(){
     }
 
     // delete test
-    let delete_keys = vec![7, 22, 3, 6];
+    let delete_keys = vec![7, 22, 3, 15];
 
     for &key in delete_keys.iter() {
+        let mut new_rootlink: BstNodeLink = rootlink.borrow().get_bst_nodelink_copy();
         if let Some(node_result) = rootlink.borrow().tree_search(&key) {
-            BstNode::tree_delete(&node_result);
+            new_rootlink = BstNode::tree_delete(rootlink.clone(), &node_result);
             println!("deleted key {} success", key)
         } else {
             println!("not found key {}, can't delete that node", key);
         }
+        rootlink = new_rootlink;
     }
 
     // print deleted tree

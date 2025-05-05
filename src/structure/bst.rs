@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-use std::sync::mpsc::RecvTimeoutError;
 
 pub type BstNodeLink = Rc<RefCell<BstNode>>;
 pub type WeakBstNodeLink = Weak<RefCell<BstNode>>;
@@ -236,27 +235,29 @@ impl BstNode {
         }
     }
 
-    pub fn tree_delete(target: &BstNodeLink){
+    pub fn tree_delete(mut rootlink: BstNodeLink, target: &BstNodeLink) -> BstNodeLink{
         if target.borrow().left.is_none() {
             BstNode::transplant(target, &target.borrow().right);
         }else if target.borrow().right.is_none() {
             BstNode::transplant(target, &target.borrow().left);
         }else {
-            let right_minimum = &target.clone().borrow().right.clone().unwrap().borrow().minimum();
-            let right_minimum_parent = BstNode::upgrade_weak_to_strong(right_minimum.borrow().parent.clone());
-            if BstNode::is_node_match_option(right_minimum_parent, Some(target.clone())) {
-                if let Some(right_right_minimum) = &right_minimum.borrow_mut().right.clone() {
-                    BstNode::transplant(right_minimum, &Some(right_right_minimum.clone()));
-                    right_minimum.borrow_mut().right = target.borrow().right.clone();
-                    right_right_minimum.borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone()));
-                }
+            let right_minimum = &target.clone().borrow().right.clone().unwrap().borrow().minimum(); // 17
+            let right_minimum_parent = BstNode::upgrade_weak_to_strong(right_minimum.borrow().parent.clone()); // 18
+            if !BstNode::is_node_match_option(right_minimum_parent, Some(target.clone())) { 
+                BstNode::transplant(right_minimum, &right_minimum.borrow().right.clone()); // 17 -> none alias child 18 ilang
+                right_minimum.borrow_mut().right = target.borrow().right.clone(); // 17.kanan -> 15.kanan
+                right_minimum.borrow().right.clone().unwrap().borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone()));
             }
-            let right_minimum_copy = right_minimum.borrow().get_bst_nodelink_copy();
-            let mut left_right_minimum = right_minimum.borrow_mut().left.clone();
-            BstNode::transplant(target, &Some(right_minimum.clone()));
-            left_right_minimum = target.borrow().left.clone();
-            left_right_minimum.unwrap().borrow_mut().parent = Some(BstNode::downgrade(&&right_minimum_copy.clone()));
+            BstNode::transplant(target, &Some(right_minimum.clone())); // 
+            right_minimum.borrow_mut().left = target.borrow().left.clone(); // 
+            right_minimum.borrow().left.clone().unwrap().borrow_mut().parent = Some(BstNode::downgrade(&right_minimum.clone())); // 
+            if let Some(exist) = target.borrow().parent.clone() {
+                return rootlink;
+            }
+            let new_rootlink = right_minimum.clone();
+            return new_rootlink;
         }
+        rootlink
     }
 
 
@@ -285,7 +286,7 @@ impl BstNode {
         return None;
     }
 
-    //helper function to compare both nodelink
+    // helper function to compare both nodelink
     fn is_node_match_option(node1: Option<BstNodeLink>, node2: Option<BstNodeLink>) -> bool {
         if node1.is_none() && node2.is_none() {
             return true;
