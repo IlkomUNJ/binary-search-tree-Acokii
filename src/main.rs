@@ -115,11 +115,11 @@ fn test_binary_search_tree(){
         if let Some(node) = rootlink.borrow().tree_search(&key) {
             print!("successor of node ({}) is ", key);
 
-            // if let Some(successor) = BstNode::tree_successor_simpler(&node) {
-            //     println!("{:?}", successor.borrow().key);
-            // } else {
-            //     println!("not found");
-            // }
+            if let Some(successor) = BstNode::tree_successor_simpler(&node) {
+                println!("{:?}", successor.borrow().key);
+            } else {
+                println!("not found");
+            }
         } else {
             println!("node with key of {} does not exist, failed to get successor", key)
         }
